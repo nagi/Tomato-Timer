@@ -1,0 +1,86 @@
+#!/usr/bin/env python
+
+import gobject
+import gtk
+import time
+import os
+from subprocess import Popen
+
+def message(data=None):
+  msg = gtk.MessageDialog(None, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_OK, data)
+  msg.run()
+  msg.destroy()
+
+def open_app(data=None):
+  message(data)
+
+def quit_app(data=None):
+  gtk.main_quit()
+
+def make_menu(event_button, event_time, data=None):
+  menu = gtk.Menu()
+
+  open_item = gtk.MenuItem("Open App")
+  quit_item = gtk.MenuItem("Quit")
+
+  menu.append(open_item)
+  menu.append(quit_item)
+
+  open_item.connect_object("activate", open_app, "Open App")
+  quit_item.connect_object("activate", quit_app, "Quit")
+
+  open_item.show()
+  quit_item.show()
+
+  menu.popup(None, None, None, event_button, event_time)
+
+def on_right_click(data, event_button, event_time):
+  make_menu(event_button, event_time)
+
+def on_left_click(event):
+  timer.toggle_timer()
+
+class Timer(object):
+  def __init__(self):
+    gobject.timeout_add(1000, self.tick)
+    self.start_time = time.time()
+    self.timer_state = "stopped"
+
+  def tick(self):
+    if self.timer_state == "running":
+      current_time = time.time() - self.start_time
+      if current_time > (60 * 25):
+        self.ring_alarm()
+
+    return True
+
+  def toggle_timer(self):
+    if self.timer_state == "stopped":
+      self.start_timer()
+    else:
+      self.stop_timer()
+
+  def start_timer(self):
+    self.start_time = time.time()
+    self.timer_state = "running"
+    icon.set_from_stock(gtk.STOCK_STOP)
+
+  def stop_timer(self):
+    self.timer_state = "stopped"
+    icon.set_from_stock(gtk.STOCK_ABOUT)
+
+  def ring_alarm(self):
+    p = Popen(["aplay", self.__alarm_sound_path()])
+    message("Times up!")
+    self.stop_timer()
+
+  def __alarm_sound_path(self):
+    base_dir = os.path.dirname(os.path.realpath(__file__))
+    return base_dir + "/alarm.wav"
+
+if __name__ == '__main__':
+  icon = gtk.status_icon_new_from_stock(gtk.STOCK_ABOUT)
+  icon.connect('popup-menu', on_right_click)
+  icon.connect('activate', on_left_click)
+  timer = Timer()
+  gtk.main()

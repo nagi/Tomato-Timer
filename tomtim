@@ -5,33 +5,24 @@ import gtk
 import time
 import os
 from subprocess import Popen
+from subprocess import check_output
+
+alarm_time = (60 * 25)
 
 def message(data=None):
   msg = gtk.MessageDialog(None, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_OK, data)
   msg.run()
   msg.destroy()
 
-def open_app(data=None):
-  message(data)
-
 def quit_app(data=None):
   gtk.main_quit()
 
 def make_menu(event_button, event_time, data=None):
   menu = gtk.Menu()
-
-  open_item = gtk.MenuItem("Open App")
   quit_item = gtk.MenuItem("Quit")
-
-  menu.append(open_item)
   menu.append(quit_item)
-
-  open_item.connect_object("activate", open_app, "Open App")
   quit_item.connect_object("activate", quit_app, "Quit")
-
-  open_item.show()
   quit_item.show()
-
   menu.popup(None, None, None, event_button, event_time)
 
 def on_right_click(data, event_button, event_time):
@@ -40,17 +31,31 @@ def on_right_click(data, event_button, event_time):
 def on_left_click(event):
   timer.toggle_timer()
 
+class CrudeIPC(object):
+  def __init__(self):
+    self.output_file_path = "/run/user/" + check_output(["id", "-u"]).strip() + "/tomtim"
+
+  def write_out(self, string):
+    self.in_memory_file = open(self.output_file_path, 'w')
+    self.in_memory_file.write(str(alarm_time) + "\n")
+    self.in_memory_file.write(string + "\n")
+    self.in_memory_file.close()
+
 class Timer(object):
   def __init__(self):
     gobject.timeout_add(1000, self.tick)
     self.start_time = time.time()
     self.timer_state = "stopped"
+    self.ipc = CrudeIPC()
 
   def tick(self):
     if self.timer_state == "running":
       current_time = time.time() - self.start_time
-      if current_time > (60 * 25):
+      self.ipc.write_out(str(int(alarm_time - current_time)))
+      if current_time > alarm_time:
         self.ring_alarm()
+    else:
+      self.ipc.write_out(str(alarm_time))
 
     return True
 

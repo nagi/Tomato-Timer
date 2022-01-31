@@ -1,7 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import gobject
-import gtk
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import GObject
+from gi.repository import Gtk
+from gi.repository import GLib
+# from gi.repository import StatusIcon
 import time
 import os
 from subprocess import Popen
@@ -10,20 +14,20 @@ from subprocess import check_output
 alarm_time = (60 * 25)
 
 def message(data=None):
-  msg = gtk.MessageDialog(None, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_OK, data)
+  msg = Gtk.MessageDialog(None, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, gtk.BUTTONS_OK, data)
   msg.run()
   msg.destroy()
 
 def quit_app(data=None):
-  gtk.main_quit()
+  Gtk.main_quit()
 
 def make_menu(event_button, event_time, data=None):
-  menu = gtk.Menu()
-  quit_item = gtk.MenuItem("Quit")
+  menu = Gtk.Menu()
+  quit_item = Gtk.MenuItem("Quit")
   menu.append(quit_item)
   quit_item.connect_object("activate", quit_app, "Quit")
   quit_item.show()
-  menu.popup(None, None, None, event_button, event_time)
+  menu.popup(None, None, None, None, event_button, event_time)
 
 def on_right_click(data, event_button, event_time):
   make_menu(event_button, event_time)
@@ -33,7 +37,8 @@ def on_left_click(event):
 
 class CrudeIPC(object):
   def __init__(self):
-    self.output_file_path = "/run/user/" + check_output(["id", "-u"]).strip() + "/tomtim"
+    self.output_file_path = os.getenv('XDG_RUNTIME_DIR') + "/tomtim"
+    print(self.output_file_path);
 
   def write_out(self, string):
     self.in_memory_file = open(self.output_file_path, 'w')
@@ -43,7 +48,7 @@ class CrudeIPC(object):
 
 class Timer(object):
   def __init__(self):
-    gobject.timeout_add(1000, self.tick)
+    GLib.timeout_add(1000, self.tick)
     self.start_time = time.time()
     self.timer_state = "stopped"
     self.ipc = CrudeIPC()
@@ -68,11 +73,11 @@ class Timer(object):
   def start_timer(self):
     self.start_time = time.time()
     self.timer_state = "running"
-    icon.set_from_stock(gtk.STOCK_STOP)
+    icon.set_from_icon_name(Gtk.STOCK_STOP)
 
   def stop_timer(self):
     self.timer_state = "stopped"
-    icon.set_from_stock(gtk.STOCK_ABOUT)
+    icon.set_from_icon_name(Gtk.STOCK_YES)
 
   def ring_alarm(self):
     p = Popen(["aplay", self.__alarm_sound_path()])
@@ -84,8 +89,9 @@ class Timer(object):
     return base_dir + "/alarm.wav"
 
 if __name__ == '__main__':
-  icon = gtk.status_icon_new_from_stock(gtk.STOCK_ABOUT)
+  icon = Gtk.StatusIcon()
+  icon.set_from_icon_name(Gtk.STOCK_YES)
   icon.connect('popup-menu', on_right_click)
   icon.connect('activate', on_left_click)
   timer = Timer()
-  gtk.main()
+  Gtk.main()
